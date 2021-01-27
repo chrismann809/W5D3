@@ -82,6 +82,21 @@ class User
         return nil if data.empty?
         data.map { |datum| Question.new(datum) }
     end
+
+    def authored_replies
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM 
+                replies
+            JOIN
+                users ON replies.author_id = users.id
+            WHERE
+                users.id = ?;
+        SQL
+        return nil if data.empty?
+        data.map { |datum| Reply.new(datum) }
+    end
 end
 
 class Question
@@ -147,6 +162,19 @@ class Question
                 questions.id = ?;
         SQL
         User.new(data.first)
+    end
+
+    def replies
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM
+                replies
+            WHERE
+                replies.question_id = ?;
+        SQL
+        return nil if data.empty?
+        data.map { |datum| Reply.new(datum) }
     end
 end
 
@@ -242,4 +270,30 @@ class Reply
         question = data.map {|datum| Question.new(datum)}
         question.first
     end 
+
+    def parent_reply
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.parent_reply_id)
+            SELECT
+                *
+            FROM
+                replies
+            WHERE
+                replies.id = ?;
+        SQL
+        return nil if data.empty?
+        data.map { |datum| Reply.new(datum) }[0]
+    end
+
+    def child_replies
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM
+                replies
+            WHERE
+                replies.parent_reply_id = ?;
+        SQL
+        return nil if data.empty?
+        data.map { |datum| Reply.new(datum) }
+    end
 end 
