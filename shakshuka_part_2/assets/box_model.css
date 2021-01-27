@@ -72,3 +72,16 @@ h2 + .user_review {
     border-top: 1px solid black;
 }
 
+nav ul li {
+  display: inline-block;
+}
+
+a {
+  display: inline-block;
+  padding: 20px;
+}
+
+nav {
+  display: inline-block;
+  align-items: flex-start;
+}
