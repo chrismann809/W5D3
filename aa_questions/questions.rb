@@ -97,6 +97,23 @@ class User
         return nil if data.empty?
         data.map { |datum| Reply.new(datum) }
     end
+
+    def followed_questions
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM
+                questions
+            JOIN question_follows
+                ON question_follows.question_id = questions.id
+            JOIN users
+                ON users.id = question_follows.follower_id
+            WHERE
+                users.id = ?
+        SQL
+        return nil if data.empty?
+        data.map {|datum| Question.new(datum)}
+    end 
 end
 
 class Question
@@ -296,4 +313,72 @@ class Reply
         return nil if data.empty?
         data.map { |datum| Reply.new(datum) }
     end
+end 
+
+class QuestionFollow
+    attr_accessor :id, :question_id, :follower_id
+
+    def self.all
+        data = QuestionsDatabase.instance.execute('SELECT * FROM question_follows')
+        data.map { |datum| QuestionFollow.new(datum) }
+    end
+
+    def initialize(options)
+        @id = options['id']
+        @question_id = options['question_id']
+        @follower_id = options['follower_id']
+    end
+
+    def create
+        raise 'id already in use' if self.id
+        QuestionsDatabase.instance.execute(<<-SQL, self.question_id, self.follower_id)
+            INSERT INTO
+                question_follows (question_id, follower_id)
+            VALUES
+                (?, ?)
+        SQL
+        self.id = QuestionsDatabase.instance.last_insert_row_id
+    end
+
+    def update
+        raise 'id not valid' unless self.id
+        QuestionsDatabase.instance.execute(<<-SQL, self.question_id, self.follower_id, self.id)
+            UPDATE
+                question_follows
+            SET
+                question_id = ?, follower_id = ?
+            WHERE
+                id = ?;
+        SQL
+    end
+
+    def self.followers_for_question_id(question_id)
+        data = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+            SELECT
+                *
+            FROM
+                users
+            JOIN question_follows
+                ON users.id = question_follows.follower_id
+            WHERE
+                question_follows.question_id = ?
+        SQL
+        return nil if data.empty?
+        data.map {|datum| User.new(datum)}
+    end 
+
+    def self.followed_question_for_follower_id(follower_id)
+        data = QuestionsDatabase.instance.execute(<<-SQL, follower_id)
+            SELECT
+                *
+            FROM
+                questions
+            JOIN question_follows
+                ON questions.id = question_follows.question_id
+            WHERE
+                question_follows.follower_id = ?
+        SQL
+        return nil if data.empty?
+        data.map {|datum| Question.new(datum)}
+    end 
 end 
