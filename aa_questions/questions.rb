@@ -1,12 +1,6 @@
 require 'sqlite3'
 require 'singleton'
 
-# SQLite3::Database.new( "data.db" ) do |db|
-#     db.execute( "select * from table" ) do |row|
-#       p row
-#     end
-#   end
-
 class QuestionsDatabase < SQLite3::Database
     include Singleton 
 
@@ -99,20 +93,7 @@ class User
     end
 
     def followed_questions
-        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
-            SELECT
-                *
-            FROM
-                questions
-            JOIN question_follows
-                ON question_follows.question_id = questions.id
-            JOIN users
-                ON users.id = question_follows.follower_id
-            WHERE
-                users.id = ?
-        SQL
-        return nil if data.empty?
-        data.map {|datum| Question.new(datum)}
+        QuestionFollow.followed_questions_for_follower_id(self.id)
     end 
 end
 
@@ -192,6 +173,10 @@ class Question
         SQL
         return nil if data.empty?
         data.map { |datum| Reply.new(datum) }
+    end
+
+    def followers
+        QuestionFollow.followers_for_question_id(self.id)
     end
 end
 
@@ -367,7 +352,7 @@ class QuestionFollow
         data.map {|datum| User.new(datum)}
     end 
 
-    def self.followed_question_for_follower_id(follower_id)
+    def self.followed_questions_for_follower_id(follower_id)
         data = QuestionsDatabase.instance.execute(<<-SQL, follower_id)
             SELECT
                 *
@@ -381,4 +366,23 @@ class QuestionFollow
         return nil if data.empty?
         data.map {|datum| Question.new(datum)}
     end 
+
+    def self.most_followed_questions(n)
+        data = QuestionsDatabase.instance.execute(<<-SQL, n)
+            SELECT DISTINCT
+                *, COUNT(follower_id)
+            FROM
+                question_follows
+            JOIN questions
+                ON questions.id = question_follows.question_id
+            GROUP BY
+                question_id
+            ORDER BY
+                COUNT(follower_id) DESC
+            LIMIT
+                ?;
+        SQL
+        return nil if data.empty?
+        data.map { |datum| Question.new(datum) }
+    end
 end 
