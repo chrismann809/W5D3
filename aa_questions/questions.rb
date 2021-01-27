@@ -53,4 +53,19 @@ class User
                 id = ?;
         SQL
     end
+
+    def self.find_by_name(fname, lname)
+        data = QuestionsDatabase.instance.execute(<<-SQL, fname, lname)
+            SELECT
+                *
+            FROM
+                users
+            WHERE 
+                fname = ? AND
+                lname = ?
+        SQL
+        User.new(data.first)
+    end 
+
+
 end
