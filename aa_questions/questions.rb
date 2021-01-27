@@ -149,3 +149,97 @@ class Question
         User.new(data.first)
     end
 end
+
+class Reply
+    attr_accessor :id, :body, :question_id, :parent_reply_id, :author_id
+
+    def self.all
+        data = QuestionsDatabase.instance.execute('SELECT * FROM replies')
+        data.map { |datum| Reply.new(datum) }
+    end
+
+    def initialize(options)
+        @id = options['id']
+        @body = options['body']
+        @question_id = options['question_id']
+        @parent_reply_id = options['parent_reply_id']
+        @author_id = options['author_id']
+    end
+
+    def create
+        raise 'id already in use' if self.id
+        QuestionsDatabase.instance.execute(<<-SQL, self.body, self.question_id, self.parent_reply_id, self.author_id)
+            INSERT INTO
+                replies (body, question_id, parent_reply_id, author_id)
+            VALUES
+                (?, ?, ?, ?)
+        SQL
+        self.id = QuestionsDatabase.instance.last_insert_row_id
+    end
+
+    def update
+        raise 'id not valid' unless self.id
+        QuestionsDatabase.instance.execute(<<-SQL, self.body, self.question_id, self.parent_reply_id, self.author_id, self.id)
+            UPDATE
+                replies
+            SET
+                body = ?, question_id = ?, parent_reply_id = ?, author_id = ?
+            WHERE
+                id = ?;
+        SQL
+    end
+
+    def self.find_by_author_id(author_id)
+        data = QuestionsDatabase.instance.execute(<<-SQL, author_id)
+            SELECT
+                *
+            FROM
+                replies
+            WHERE 
+                author_id = ?;
+        SQL
+        data.map {|datum| Reply.new(datum)}
+    end 
+
+    def self.find_by_question_id(question_id)
+        data = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+            SELECT
+                *
+            FROM
+                replies
+            WHERE 
+                question_id = ?;
+        SQL
+        data.map {|datum| Reply.new(datum)}
+    end
+
+    def author
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM
+                users
+            JOIN 
+                replies ON replies.author_id = users.id
+            WHERE
+                replies.id = ?;
+        SQL
+        author = data.map {|datum| User.new(datum)}
+        author.first
+    end 
+
+    def question
+        data = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+            SELECT
+                *
+            FROM
+                questions
+            JOIN 
+                replies ON replies.question_id = questions.id
+            WHERE
+                replies.id = ?;
+        SQL
+        question = data.map {|datum| Question.new(datum)}
+        question.first
+    end 
+end 
