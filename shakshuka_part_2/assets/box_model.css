@@ -4,6 +4,8 @@ body {
   /* If the user cannot load the Arial font, the sans-serif font is used */
   font-family: Arial, sans-serif;
   background-color: #FEFFF1;
+  width: 900px;
+  margin: 0 auto;
 }
 
 h1 {
@@ -85,3 +87,28 @@ nav {
   display: inline-block;
   align-items: flex-start;
 }
+
+section {
+  width: 700px;
+  display: inline-block;
+}
+
+aside {
+  width: 180px;
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 15px;
+}
+
+.ingredients-list li {
+  margin: 15px
+}
+
+section ol li {
+  margin: 15px
+}
+
+input[type = 'text'], .expertise  {
+  display: block
+}
+
